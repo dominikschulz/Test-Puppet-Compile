@@ -142,6 +142,20 @@ has 'warnings' => (
   'default' => 0,
 );
 
+# if set create the named directory and place reports there
+has 'reportsdir' => (
+  'is'      => 'rw',
+  'isa'     => 'Str',
+  'default' => '',
+);
+
+# set to false to keep temporary files/directories
+has 'cleanup' => (
+  'is'      => 'ro',
+  'isa'     => 'Bool',
+  'default' => 1,
+);
+
 #
 # Internal attributes from here on ...
 #
@@ -160,11 +174,18 @@ has 'tempdir' => (
   'builder' => '_init_tempdir',
 );
 
+has '_reports' => (
+  'is'      => 'rw',
+  'isa'     => 'HashRef',
+  'default' => sub { {} },
+);
+
 #
 # Initializers
 #
 sub _init_tempdir {
-  return File::Temp::tempdir( CLEANUP => 1 );
+  my $self = shift;
+  return File::Temp::tempdir( CLEANUP => $self->cleanup() );
 }
 
 sub _init_tt {
@@ -286,14 +307,84 @@ sub test {
           diag('Puppet Compile: '.$line);
         }
       }
+      # archive reports
+      if(-e $errfile) {
+        $self->_archive_report($env,$hostname,$domain,$errfile);
+      }
     }
   }
   
   done_testing();
+
+  $self->_archive_summary();
+  return 1;
 }
 #
 # Private helper methods
 #
+
+sub _archive_report {
+  my $self = shift;
+  my $env  = shift;
+  my $hostname = shift;
+  my $domain   = shift;
+  my $errfile  = shift;
+
+  return unless $self->reportsdir();
+  my $rd = $self->basedir().'/'.$self->reportsdir();
+  return unless -d $rd;
+  return unless -e $errfile;
+
+  mkdir $rd.'/'.$env;
+  mkdir $rd.'/'.$env.'/'.$domain;
+  my $filename = $rd.'/'.$env.'/'.$domain.'/'.$hostname.'.html';
+
+  open(my $FH, '<', $errfile);
+  my @lines = <$FH>;
+  close($FH);
+
+  open($FH, '>', $filename);
+  print $FH "<html><head><title>Puppet Errors and Warnings for $env/$hostname.$domain</title></head><body><pre>\n";
+  foreach my $line (@lines) {
+    print $FH $line, "\n";
+  }
+  print $FH "</pre></body></html>\n";
+  close($FH);
+
+  $self->_reports()->{$env}->{$domain}->{$hostname} = $filename;
+
+  return 1;
+}
+
+sub _archive_summary {
+  my $self = shift;
+  return unless $self->reportsdir();
+  my $rd = $self->basedir().'/'.$self->reportsdir();
+  return unless -d $rd;
+
+  my $filename = $rd.'/'.$self->name().'.html';
+
+  open(my $FH, '>', $filename);
+  print $FH "<html><head><title>Puppet Error and Warning Overview for Test ".$self->name()."</title></head><body>\n";
+  print $FH "<ul>\n";
+  foreach my $env (sort keys %{$self->_reports()}) {
+    print $FH "<li>Environment: $env\n<ul>\n";
+    foreach my $domain (sort keys %{$self->_reports()->{$env}}) {
+      print $FH "<li>Domain: $domain\n<ul>\n";
+      foreach my $hostname (sort keys %{$self->_reports()->{$env}->{$domain}}) {
+        my $filename = $self->_reports()->{$env}->{$domain}->{$hostname};
+        print $FH '<li>Host: <a href="'.$filename.'">'.$hostname.'</a></li>',"\n";
+      }
+      print $FH "</ul>\n</li>\n";
+    }
+    print $FH "</ul>\n</li>\n";
+  }
+  print $FH "</ul>\n";
+  print $FH "</html>\n";
+  close($FH);
+
+  return 1;
+}
 
 # setup - prepare the test environemnt
 sub _setup {
@@ -327,6 +418,9 @@ sub _create_skeleton {
   foreach my $d (qw(out log run ssl var var/yaml var/yaml/facts var/yaml/node)) {
     mkdir($self->tempdir().'/'.$d)
       or return;
+  }
+  if($self->reportsdir() && !-e $self->reportsdir()) {
+    mkdir($self->basedir().'/'.$self->reportsdir());
   }
   return 1;
 }
@@ -397,6 +491,7 @@ sub __sync {
   }
   return 1;
 }
+
 sub _scan_nodes {
   my $self = shift;
    my %nodes = ();
