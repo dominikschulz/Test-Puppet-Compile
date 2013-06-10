@@ -337,7 +337,7 @@ sub _archive_report {
 
   mkdir $rd.'/'.$env;
   mkdir $rd.'/'.$env.'/'.$domain;
-  my $filename = $rd.'/'.$env.'/'.$domain.'/'.$hostname.'.html';
+  my $filename = $env.'/'.$domain.'/'.$hostname.'.html';
 
   open(my $FH, '<', $errfile);
   my @lines = <$FH>;
