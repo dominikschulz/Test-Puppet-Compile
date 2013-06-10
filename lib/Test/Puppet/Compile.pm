@@ -337,21 +337,24 @@ sub _archive_report {
 
   mkdir $rd.'/'.$env;
   mkdir $rd.'/'.$env.'/'.$domain;
-  my $filename = $env.'/'.$domain.'/'.$hostname.'.html';
+  my $filename_rel = $env.'/'.$domain.'/'.$hostname.'.html';
+  my $filename_abs = $rd.'/'.$filename_rel;
 
   open(my $FH, '<', $errfile);
   my @lines = <$FH>;
   close($FH);
 
-  open($FH, '>', $filename);
+  open($FH, '>', $filename_abs)
+    or return;
   print $FH "<html><head><title>Puppet Errors and Warnings for $env/$hostname.$domain</title></head><body><pre>\n";
   foreach my $line (@lines) {
-    print $FH $line, "\n";
+    print $FH $line, "\n"
+      or return;
   }
   print $FH "</pre></body></html>\n";
   close($FH);
 
-  $self->_reports()->{$env}->{$domain}->{$hostname} = $filename;
+  $self->_reports()->{$env}->{$domain}->{$hostname} = $filename_rel;
 
   return 1;
 }
