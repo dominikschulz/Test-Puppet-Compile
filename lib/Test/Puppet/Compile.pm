@@ -298,9 +298,7 @@ sub test {
         open(my $FH, '<', $errfile);
         my @lines = <$FH>;
         close($FH);
-        if($self->warnings()) {
-          @lines = grep { /(?:Error|Warning): / } @lines; 
-        } else {
+        if(!$self->warnings()) {
           @lines = grep { /Error: / } @lines; 
         }
         foreach my $line (@lines) {
