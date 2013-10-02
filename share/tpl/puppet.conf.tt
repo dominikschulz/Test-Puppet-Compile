@@ -13,4 +13,8 @@ postrun_command=/etc/puppet/etckeeper-commit-post
   manifest     = [% manifest %]
   modulepath   = [% modulepath %]
   hiera_config = [% hieraconfig %]
+[% IF use_enc %]
+  node_terminus = exec
+  external_nodes = [% enc %]
+[% END %]
 

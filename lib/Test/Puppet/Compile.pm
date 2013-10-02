@@ -149,6 +149,13 @@ has 'reportsdir' => (
   'default' => '',
 );
 
+# if set use the specified ENC
+has 'enc' => (
+  'is'      => 'rw',
+  'isa'     => 'Str',
+  'default' => '',
+);
+
 # set to false to keep temporary files/directories
 has 'cleanup' => (
   'is'      => 'ro',
@@ -430,14 +437,19 @@ sub _write_puppetconf {
   my $self = shift;
   my $filename = $self->tempdir().'/puppet.conf';
   my $body;
+  my $vars = {
+    'tempdir'     => $self->tempdir(),
+    'manifest'    => $self->tempdir().'/manifests/$environment.pp',
+    'modulepath'  => $self->tempdir().'/'.join( ':'.$self->tempdir().'/', @{$self->moduledirs}),
+    'hieraconfig' => $self->tempdir().'/hiera.yaml',
+  };
+  if ($self->enc() && -e $self->basedir().'/'.$self->enc()) {
+    $vars->{'use_enc'} = 1;
+    $vars->{'enc'} = $self->enc();
+  }
   $self->tt()->process(
       'puppet.conf.tt',
-      {
-          'tempdir'     => $self->tempdir(),
-          'manifest'    => $self->tempdir().'/manifests/$environment.pp',
-          'modulepath'  => $self->tempdir().'/'.join( ':'.$self->tempdir().'/', @{$self->moduledirs}),
-          'hieraconfig' => $self->tempdir().'/hiera.yaml',
-      },
+      $vars,
       \$body,
   ) or return;
   open(my $FH, '>', $filename);
