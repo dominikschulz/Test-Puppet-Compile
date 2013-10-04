@@ -248,18 +248,18 @@ sub test {
   my $self = shift;
 
   diag('Tempdir: '.$self->tempdir());
- 
+
   # set up dir structure
   ok($self->_setup(),'Setup for tests successfull');
-  
+
   my $node_ref = $self->_scan_nodes();
-  
+
   is(ref($node_ref),'HASH','Node_ref is an hashref');
   ok(scalar(keys %$node_ref) > 0,'Found at least one environment');
   foreach my $env (@{$self->reqenvs()}) {
     is(ref($node_ref->{$env}),'HASH','Found Env '.$env);
   }
-  
+
   # loop over each environment
   EMV: foreach my $env (sort keys %$node_ref) {
     ok(exists $node_ref->{$env},'Env '.$env.' is defined');
@@ -306,7 +306,7 @@ sub test {
         my @lines = <$FH>;
         close($FH);
         if(!$self->warnings()) {
-          @lines = grep { /Error: / } @lines; 
+          @lines = grep { /Error: / } @lines;
         }
         foreach my $line (@lines) {
           diag('Puppet Compile: '.$line);
@@ -318,7 +318,7 @@ sub test {
       }
     }
   }
-  
+
   done_testing();
 
   $self->_archive_summary();
