@@ -427,6 +427,7 @@ sub _create_skeleton {
     mkdir($self->tempdir().'/'.$d)
       or return;
   }
+  system('chmod -R 777 '.$self->tempdir());
   if($self->reportsdir() && !-e $self->reportsdir()) {
     mkdir($self->basedir().'/'.$self->reportsdir());
   }
